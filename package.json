@@ -1,0 +1,14 @@
+{
+  "name": "cpu-monitor",
+  "version": "2.0.0",
+  "description": "Real-time CPU usage monitor with beautiful UI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "systeminformation": "^5.21.20",
+    "ws": "^8.14.2"
+  }
+}

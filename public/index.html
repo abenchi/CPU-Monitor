@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPU Monitor</title>
+    <meta name="theme-color" content="#1a1a2e">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                registrations.forEach(r => r.unregister());
+            });
+            caches.keys().then(names => {
+                names.forEach(name => caches.delete(name));
+            });
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-tertiary: #0f3460;
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-muted: rgba(255, 255, 255, 0.5);
+            --accent: #4facfe;
+            --accent-secondary: #00f2fe;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --success: #00d4aa;
+            --warning: #f9ca24;
+            --danger: #eb4d4b;
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #f0f4f8;
+            --bg-secondary: #e2e8f0;
+            --bg-tertiary: #cbd5e1;
+            --text-primary: #1e293b;
+            --text-secondary: rgba(30, 41, 59, 0.8);
+            --text-muted: rgba(30, 41, 59, 0.5);
+            --card-bg: rgba(255, 255, 255, 0.8);
+            --card-border: rgba(0, 0, 0, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-tertiary) 100%);
+            color: var(--text-primary);
+        }
+
+        .alert-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 9999;
+        }
+        .alert-overlay.active {
+            animation: alertPulse 1s ease-in-out infinite;
+        }
+        @keyframes alertPulse {
+            0%, 100% { box-shadow: inset 0 0 100px rgba(235, 77, 75, 0); }
+            50% { box-shadow: inset 0 0 100px rgba(235, 77, 75, 0.3); }
+        }
+
+        .stars {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+        [data-theme="light"] .stars { display: none; }
+        .star {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 3s ease-in-out infinite;
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .app {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
+        .header h1 {
+            font-size: 22px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header-right { display: flex; gap: 10px; align-items: center; }
+        .header-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 8px 14px;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .header-btn:hover { background: rgba(79, 172, 254, 0.2); }
+        .header-btn svg { width: 16px; height: 16px; }
+
+        .main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 220px 220px 1fr 280px;
+            grid-template-rows: 3fr 2fr;
+            gap: 12px;
+            padding: 12px;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            border: 1px solid var(--card-border);
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+        }
+        .card-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .info-icon {
+            width: 18px;
+            height: 18px;
+            background: rgba(79, 172, 254, 0.2);
+            border: 1px solid rgba(79, 172, 254, 0.5);
+            border-radius: 50%;
+            color: var(--accent);
+            font-size: 11px;
+            font-weight: 700;
+            font-style: italic;
+            cursor: help;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        .info-icon::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-primary);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 12px;
+            color: var(--text-primary);
+            font-size: 12px;
+            font-style: normal;
+            font-weight: 400;
+            width: 220px;
+            opacity: 0;
+            visibility: hidden;
+            transition: 0.2s;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        .info-icon:hover::after { opacity: 1; visibility: visible; }
+        
+        /* CPU : tooltip en bas à droite */
+        .cpu-card .info-icon::after {
+            top: calc(100% + 8px);
+            left: 0;
+            right: auto;
+            transform: none;
+        }
+        
+        /* RAM : tooltip en bas */
+        .memory-card .info-icon::after {
+            top: calc(100% + 8px);
+            left: 0;
+            right: auto;
+            transform: none;
+        }
+        
+        /* Historique : tooltip en haut (car en bas de page) */
+        .chart-card .info-icon::after {
+            top: auto;
+            bottom: calc(100% + 8px);
+            left: 0;
+            right: auto;
+            transform: none;
+        }
+        
+        /* Z-index pour tous les info-icons */
+        .card .info-icon {
+            z-index: 100;
+        }
+        .card:hover {
+            z-index: 50;
+        }
+        .info-icon:hover {
+            z-index: 3000 !important;
+        }
+        .info-icon:hover::after {
+            z-index: 3001;
+        }
+
+        /* CPU Card */
+        .cpu-card { grid-row: span 1; }
+        .cpu-content { display: flex; flex-direction: column; align-items: center; gap: 12px; flex: 1; justify-content: center; }
+        .chip-icon { width: 70px; height: 70px; position: relative; }
+        .chip-body {
+            width: 50px; height: 50px;
+            background: linear-gradient(145deg, #3a3a5c, #2a2a4c);
+            border-radius: 8px;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .chip-label { font-size: 14px; font-weight: 700; color: #fff; }
+        .chip-pins { position: absolute; background: #6b6b8d; border-radius: 2px; }
+        .pins-top, .pins-bottom { width: 35px; height: 4px; left: 50%; transform: translateX(-50%); }
+        .pins-top { top: 4px; }
+        .pins-bottom { bottom: 4px; }
+        .pins-left, .pins-right { width: 4px; height: 35px; top: 50%; transform: translateY(-50%); }
+        .pins-left { left: 4px; }
+        .pins-right { right: 4px; }
+        .apple-chip { background: linear-gradient(145deg, #1d1d1f, #2d2d2f); border: 2px solid #3d3d3f; }
+        .intel-chip { background: linear-gradient(145deg, #0071c5, #005a9e); }
+        .amd-chip { background: linear-gradient(145deg, #ed1c24, #c41e3a); }
+        .cpu-name { font-size: 13px; text-align: center; color: var(--text-secondary); }
+        .gauge-container { position: relative; width: 130px; height: 130px; }
+        .gauge-bg {
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(from 135deg, rgba(255,255,255,0.05) 0deg, rgba(255,255,255,0.05) 270deg, transparent 270deg);
+            position: absolute;
+        }
+        .gauge-fill { width: 100%; height: 100%; border-radius: 50%; position: absolute; transition: background 0.5s ease; }
+        .gauge-inner {
+            width: 95px; height: 95px;
+            background: var(--bg-primary);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .percentage { font-size: 32px; font-weight: 700; transition: color 0.3s; }
+        .percentage-symbol { font-size: 16px; color: var(--text-muted); }
+        .gauge-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
+
+        /* Memory Card */
+        .memory-card { grid-row: span 1; }
+        .memory-content { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .memory-value { font-size: 48px; font-weight: 700; text-align: center; }
+        .memory-bar { height: 16px; background: rgba(255,255,255,0.1); border-radius: 8px; margin: 15px 0; overflow: hidden; }
+        .memory-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-secondary)); border-radius: 8px; transition: width 0.5s ease; }
+        .memory-stats { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-muted); }
+
+        /* Cores Card */
+        .cores-card { grid-row: span 1; }
+        .cores-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+            gap: 10px;
+            overflow: auto;
+            align-content: start;
+        }
+        .core-item {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+        }
+        .core-item.primary { border: 2px solid rgba(79, 172, 254, 0.4); }
+        .core-number { font-size: 12px; color: var(--text-muted); }
+        .core-ghz { font-size: 10px; color: var(--text-muted); margin: 4px 0; }
+        .core-bar { height: 45px; width: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; margin: 0 auto 6px; position: relative; overflow: hidden; }
+        .core-bar-fill {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            border-radius: 5px;
+            transition: height 0.5s ease-out;
+        }
+        .core-value { font-size: 12px; font-weight: 600; }
+
+        /* Processes Card */
+        .processes-card { grid-row: span 1; }
+        .process-list { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
+        .process-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        .process-name { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .process-stats { display: flex; gap: 12px; }
+        .process-cpu { color: var(--accent); }
+        .process-mem { color: var(--accent-secondary); }
+
+        /* Chart & Stats Row */
+        .chart-card { grid-column: span 3; }
+        .chart-container { flex: 1; min-height: 0; }
+        .chart-canvas { width: 100%; height: 100%; }
+
+        .stats-card { grid-column: span 1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-content: center; }
+        .stat-item { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 12px; text-align: center; }
+        .stat-value { font-size: 18px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+        .stat-label { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+
+        .connection-status {
+            position: fixed;
+            bottom: 8px;
+            left: 12px;
+            padding: 6px 12px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 15px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+        .status-dot.disconnected { background: var(--danger); }
+
+        /* Mini Mode */
+        .mini-mode .header { display: none; }
+        .mini-mode .main { display: none; }
+        .mini-mode .connection-status { display: none; }
+        .mini-mode .stars { display: none; }
+        
+        .mini-widget {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 20px 30px;
+            text-align: center;
+            cursor: move;
+            user-select: none;
+            z-index: 1000;
+        }
+        
+        .mini-mode .mini-widget {
+            display: block;
+        }
+        
+        .mini-widget-close {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 24px;
+            height: 24px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 50%;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .mini-widget-close:hover {
+            background: rgba(235, 77, 75, 0.3);
+            color: #eb4d4b;
+        }
+        
+        .mini-cpu-name {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+        
+        .mini-percentage {
+            font-size: 48px;
+            font-weight: 700;
+            line-height: 1;
+            transition: color 0.3s;
+        }
+        
+        .mini-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        @media (max-width: 1000px) {
+            .main {
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: auto auto auto;
+            }
+            .cores-card { grid-column: span 2; }
+            .chart-card { grid-column: span 2; }
+            .stats-card { grid-column: span 2; }
+        }
+    </style>
+</head>
+<body>
+    <div class="alert-overlay" id="alertOverlay"></div>
+    <div class="stars" id="stars"></div>
+    
+    <div class="app">
+        <header class="header">
+            <h1>CPU Monitor</h1>
+            <div class="header-right">
+                <button class="header-btn" id="themeToggle">
+                    <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    </svg>
+                    Thème
+                </button>
+                <button class="header-btn" id="fullscreenToggle">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                    </svg>
+                    Plein écran
+                </button>
+                <button class="header-btn" id="miniModeToggle">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>
+                    </svg>
+                    Mini
+                </button>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="card cpu-card">
+                <div class="card-title">CPU <span class="info-icon" data-tooltip="Processeur principal et son utilisation actuelle">i</span></div>
+                <div class="cpu-content">
+                    <div class="chip-icon">
+                        <div class="chip-pins pins-top"></div>
+                        <div class="chip-pins pins-bottom"></div>
+                        <div class="chip-pins pins-left"></div>
+                        <div class="chip-pins pins-right"></div>
+                        <div class="chip-body" id="chipBody"><span class="chip-label" id="chipLabel">CPU</span></div>
+                    </div>
+                    <div class="cpu-name" id="cpuName">Chargement...</div>
+                    <div class="gauge-container">
+                        <div class="gauge-bg"></div>
+                        <div class="gauge-fill" id="gaugeFill"></div>
+                        <div class="gauge-inner">
+                            <div class="percentage"><span id="usageValue">0</span><span class="percentage-symbol">%</span></div>
+                            <div class="gauge-label">Utilisation</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card memory-card">
+                <div class="card-title">Mémoire RAM <span class="info-icon" data-tooltip="Mémoire vive utilisée par vos applications">i</span></div>
+                <div class="memory-content">
+                    <div class="memory-value"><span id="memUsage">0</span><span class="percentage-symbol">%</span></div>
+                    <div class="memory-bar"><div class="memory-bar-fill" id="memBar"></div></div>
+                    <div class="memory-stats">
+                        <span>Utilisé: <span id="memUsed">0</span> GB</span>
+                        <span>Total: <span id="memTotal">0</span> GB</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card cores-card">
+                <div class="card-title">Cœurs <span class="info-icon" data-tooltip="Utilisation de chaque cœur du processeur avec sa fréquence">i</span></div>
+                <div class="cores-grid" id="coresGrid"></div>
+            </div>
+
+            <div class="card processes-card">
+                <div class="card-title">Top 5 Processus <span class="info-icon" data-tooltip="Les 5 applications les plus gourmandes en CPU">i</span></div>
+                <div class="process-list" id="processList"></div>
+            </div>
+
+            <div class="card chart-card">
+                <div class="card-title">Historique <span class="info-icon" data-tooltip="Évolution CPU (bleu) et RAM (cyan) sur 60 secondes">i</span></div>
+                <div class="chart-container"><canvas class="chart-canvas" id="historyChart"></canvas></div>
+            </div>
+
+            <div class="card stats-card">
+                <div class="stat-item"><div class="stat-value" id="coresValue">-</div><div class="stat-label">Cœurs</div></div>
+                <div class="stat-item"><div class="stat-value" id="speedValue">-</div><div class="stat-label">GHz</div></div>
+                <div class="stat-item"><div class="stat-value" id="processesValue">-</div><div class="stat-label">Processus</div></div>
+                <div class="stat-item"><div class="stat-value" id="ioOpsValue">-</div><div class="stat-label">I/O Ops/s</div></div>
+            </div>
+        </main>
+    </div>
+
+    <div class="connection-status">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Connexion...</span>
+    </div>
+
+    <div class="mini-widget" id="miniWidget">
+        <button class="mini-widget-close" id="miniClose">×</button>
+        <div class="mini-cpu-name" id="miniCpuName">CPU</div>
+        <div class="mini-percentage" id="miniPercentage">0%</div>
+        <div class="mini-label">Utilisation CPU</div>
+    </div>
+
+    <script>
+        const HISTORY_LENGTH = 120;
+        let cpuHistory = [], memHistory = [];
+        let currentDisplayUsage = 0, targetUsage = 0;
+        let ws = null, chartCtx = null;
+        let coresInitialized = false, coreElements = [];
+
+        const coreColors = [
+            '#4facfe', '#00f2fe', '#a8edea', '#fed6e3', '#ff9a9e', '#fecfef', '#ffecd2', '#fcb69f',
+            '#a1c4fd', '#c2e9fb', '#d4fc79', '#96e6a1', '#84fab0', '#8fd3f4', '#fa709a', '#fee140'
+        ];
+
+        function createStars() {
+            const c = document.getElementById('stars');
+            for (let i = 0; i < 60; i++) {
+                const s = document.createElement('div');
+                s.className = 'star';
+                s.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*100}%;animation-delay:${Math.random()*3}s;`;
+                c.appendChild(s);
+            }
+        }
+
+        function initTheme() {
+            const t = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', t);
+            updateThemeIcon(t);
+        }
+
+        function toggleTheme() {
+            const c = document.documentElement.getAttribute('data-theme');
+            const n = c === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', n);
+            localStorage.setItem('theme', n);
+            updateThemeIcon(n);
+        }
+
+        function updateThemeIcon(t) {
+            document.getElementById('themeIcon').innerHTML = t === 'light' 
+                ? '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'
+                : '<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>';
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+            else document.exitFullscreen();
+        }
+
+        function getGaugeColor(u) {
+            if (u < 30) return '#00d4aa';
+            if (u < 60) return '#f9ca24';
+            if (u < 85) return '#f0932b';
+            return '#eb4d4b';
+        }
+
+        function updateGauge(u) {
+            const c = getGaugeColor(u);
+            const a = (u / 100) * 270;
+            document.getElementById('gaugeFill').style.background = `conic-gradient(from 135deg, ${c} 0deg, ${c} ${a}deg, transparent ${a}deg)`;
+            document.querySelector('.percentage').style.color = c;
+        }
+
+        function smoothUpdateGauge() {
+            currentDisplayUsage += (targetUsage - currentDisplayUsage) * 0.15;
+            updateGauge(currentDisplayUsage);
+            requestAnimationFrame(smoothUpdateGauge);
+        }
+
+        function formatBytes(b) { return (b / 1073741824).toFixed(1); }
+        function formatNumber(n) {
+            if (n >= 1e12) return (n / 1e12).toFixed(1) + 'T';
+            if (n >= 1e9) return (n / 1e9).toFixed(1) + 'G';
+            if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+            if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+            return n.toString();
+        }
+
+        function detectChipType(brand, manufacturer) {
+            const b = (brand || '').toLowerCase(), m = (manufacturer || '').toLowerCase();
+            const chip = document.getElementById('chipBody'), label = document.getElementById('chipLabel');
+            if (b.includes('m4')) { chip.className = 'chip-body apple-chip'; label.textContent = 'M4'; }
+            else if (b.includes('m3')) { chip.className = 'chip-body apple-chip'; label.textContent = 'M3'; }
+            else if (b.includes('m2')) { chip.className = 'chip-body apple-chip'; label.textContent = 'M2'; }
+            else if (b.includes('m1')) { chip.className = 'chip-body apple-chip'; label.textContent = 'M1'; }
+            else if (m.includes('apple')) { chip.className = 'chip-body apple-chip'; label.textContent = 'Apple'; }
+            else if (m.includes('intel')) { chip.className = 'chip-body intel-chip'; label.textContent = 'Intel'; }
+            else if (m.includes('amd')) { chip.className = 'chip-body amd-chip'; label.textContent = 'AMD'; }
+        }
+
+        function initCores(cores, speed) {
+            const grid = document.getElementById('coresGrid');
+            const color = '#4facfe';
+            grid.innerHTML = cores.map((c, i) => {
+                return `<div class="core-item">
+                    <div class="core-number" style="color:${color}">Cœur ${c.core}</div>
+                    <div class="core-ghz" id="ghz-${i}">${speed.toFixed(1)} GHz</div>
+                    <div class="core-bar"><div class="core-bar-fill" id="bar-${i}" style="background:${color};height:0%"></div></div>
+                    <div class="core-value" id="val-${i}" style="color:${color}">0%</div>
+                </div>`;
+            }).join('');
+            coreElements = cores.map((_, i) => ({
+                bar: document.getElementById(`bar-${i}`),
+                val: document.getElementById(`val-${i}`),
+                ghz: document.getElementById(`ghz-${i}`)
+            }));
+            coresInitialized = true;
+            setTimeout(() => cores.forEach((c, i) => {
+                coreElements[i].bar.style.height = c.load + '%';
+                coreElements[i].val.textContent = c.load + '%';
+            }), 50);
+        }
+
+        function updateCores(cores, speed) {
+            if (!coresInitialized) return initCores(cores, speed);
+            cores.forEach((c, i) => {
+                if (coreElements[i]) {
+                    coreElements[i].bar.style.height = c.load + '%';
+                    coreElements[i].val.textContent = c.load + '%';
+                    coreElements[i].ghz.textContent = speed.toFixed(1) + ' GHz';
+                }
+            });
+        }
+
+        function updateProcesses(procs) {
+            document.getElementById('processList').innerHTML = procs.map(p => 
+                `<div class="process-item"><span class="process-name">${p.name}</span><div class="process-stats"><span class="process-cpu">CPU: ${p.cpu}%</span><span class="process-mem">RAM: ${p.mem}%</span></div></div>`
+            ).join('');
+        }
+
+        function initChart() {
+            const canvas = document.getElementById('historyChart');
+            chartCtx = canvas.getContext('2d');
+            resizeChart();
+        }
+
+        function resizeChart() {
+            const canvas = document.getElementById('historyChart');
+            canvas.width = canvas.offsetWidth * 2;
+            canvas.height = canvas.offsetHeight * 2;
+            chartCtx.scale(2, 2);
+        }
+
+        function drawChart() {
+            const canvas = document.getElementById('historyChart');
+            const w = canvas.offsetWidth, h = canvas.offsetHeight;
+            chartCtx.clearRect(0, 0, w, h);
+            
+            chartCtx.strokeStyle = 'rgba(255,255,255,0.1)';
+            chartCtx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                chartCtx.beginPath();
+                chartCtx.moveTo(0, (h/4)*i);
+                chartCtx.lineTo(w, (h/4)*i);
+                chartCtx.stroke();
+            }
+            
+            if (cpuHistory.length > 1) {
+                chartCtx.beginPath();
+                chartCtx.strokeStyle = '#4facfe';
+                chartCtx.lineWidth = 2;
+                cpuHistory.forEach((v, i) => {
+                    const x = (i / (HISTORY_LENGTH - 1)) * w;
+                    const y = h - (v / 100) * h;
+                    i === 0 ? chartCtx.moveTo(x, y) : chartCtx.lineTo(x, y);
+                });
+                chartCtx.stroke();
+
+                chartCtx.beginPath();
+                chartCtx.strokeStyle = '#00f2fe';
+                memHistory.forEach((v, i) => {
+                    const x = (i / (HISTORY_LENGTH - 1)) * w;
+                    const y = h - (v / 100) * h;
+                    i === 0 ? chartCtx.moveTo(x, y) : chartCtx.lineTo(x, y);
+                });
+                chartCtx.stroke();
+            }
+        }
+
+        function updateAlert(u) {
+            document.getElementById('alertOverlay').classList.toggle('active', u > 80);
+        }
+
+        function updateData(d) {
+            targetUsage = d.cpu.usage;
+            document.getElementById('usageValue').textContent = Math.round(d.cpu.usage);
+            document.getElementById('cpuName').textContent = d.cpu.brand;
+            document.getElementById('coresValue').textContent = d.cpu.cores;
+            document.getElementById('speedValue').textContent = d.cpu.speed.toFixed(1);
+            document.getElementById('processesValue').textContent = d.processes.total;
+            document.getElementById('ioOpsValue').textContent = formatNumber(d.io.opsPerSec);
+            
+            document.getElementById('memUsage').textContent = Math.round(d.memory.usagePercent);
+            document.getElementById('memBar').style.width = d.memory.usagePercent + '%';
+            document.getElementById('memUsed').textContent = formatBytes(d.memory.used);
+            document.getElementById('memTotal').textContent = formatBytes(d.memory.total);
+            
+            // Mini widget update
+            document.getElementById('miniCpuName').textContent = d.cpu.brand;
+            document.getElementById('miniPercentage').textContent = Math.round(d.cpu.usage) + '%';
+            document.getElementById('miniPercentage').style.color = getGaugeColor(d.cpu.usage);
+            
+            detectChipType(d.cpu.brand, d.cpu.manufacturer);
+            updateCores(d.coresLoad, d.cpu.speed);
+            updateProcesses(d.processes.top5);
+            updateAlert(d.cpu.usage);
+            
+            cpuHistory.push(d.cpu.usage);
+            memHistory.push(d.memory.usagePercent);
+            if (cpuHistory.length > HISTORY_LENGTH) cpuHistory.shift();
+            if (memHistory.length > HISTORY_LENGTH) memHistory.shift();
+            drawChart();
+        }
+
+        function connectWebSocket() {
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${location.host}`);
+            ws.onopen = () => {
+                document.getElementById('statusDot').classList.remove('disconnected');
+                document.getElementById('statusText').textContent = 'Connecté';
+            };
+            ws.onmessage = (e) => updateData(JSON.parse(e.data));
+            ws.onclose = () => {
+                document.getElementById('statusDot').classList.add('disconnected');
+                document.getElementById('statusText').textContent = 'Déconnecté';
+                setTimeout(connectWebSocket, 2000);
+            };
+            ws.onerror = () => ws.close();
+        }
+
+        function toggleMiniMode() {
+            // Ouvre une nouvelle petite fenêtre popup
+            const width = 200;
+            const height = 150;
+            const left = window.screen.width - width - 50;
+            const top = 50;
+            
+            window.open(
+                '/mini.html',
+                'CPU Monitor Mini',
+                `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no,resizable=yes`
+            );
+        }
+
+        function closeMiniMode() {
+            document.body.classList.remove('mini-mode');
+        }
+
+        // Draggable mini widget
+        const miniWidget = document.getElementById('miniWidget');
+        let isDragging = false;
+        let dragOffsetX, dragOffsetY;
+
+        miniWidget.addEventListener('mousedown', (e) => {
+            if (e.target.id === 'miniClose') return;
+            isDragging = true;
+            const rect = miniWidget.getBoundingClientRect();
+            dragOffsetX = e.clientX - rect.left;
+            dragOffsetY = e.clientY - rect.top;
+            miniWidget.style.transform = 'none';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            miniWidget.style.left = (e.clientX - dragOffsetX) + 'px';
+            miniWidget.style.top = (e.clientY - dragOffsetY) + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+        document.getElementById('fullscreenToggle').addEventListener('click', toggleFullscreen);
+        document.getElementById('miniModeToggle').addEventListener('click', toggleMiniMode);
+        document.getElementById('miniClose').addEventListener('click', closeMiniMode);
+        window.addEventListener('resize', () => { resizeChart(); drawChart(); });
+
+        createStars();
+        initTheme();
+        initChart();
+        smoothUpdateGauge();
+        connectWebSocket();
+    </script>
+</body>
+</html>
