@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -120,21 +120,29 @@
             position: absolute;
             left: 50%;
             transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
         }
         .lang-btn {
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 8px;
-            padding: 8px 14px;
+            padding: 8px 12px;
             color: var(--text-primary);
             cursor: pointer;
-            font-size: 18px;
+            font-size: 20px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: center;
+            opacity: 0.5;
+            transition: all 0.2s;
         }
-        .lang-btn:hover { background: rgba(79, 172, 254, 0.2); }
-        .lang-btn span { font-size: 12px; }
+        .lang-btn:hover { background: rgba(79, 172, 254, 0.2); opacity: 0.8; }
+        .lang-btn.active { 
+            opacity: 1; 
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(79, 172, 254, 0.3);
+        }
         .header-right { display: flex; gap: 10px; align-items: center; }
         .header-btn {
             background: var(--card-bg);
@@ -476,9 +484,8 @@
         <header class="header">
             <h1>CPU Monitor</h1>
             <div class="header-center">
-                <button class="lang-btn" id="langToggle">
-                    🇫🇷 <span>FR</span>
-                </button>
+                <button class="lang-btn" id="langFr" title="Français">🇫🇷</button>
+                <button class="lang-btn" id="langEn" title="English">🇬🇧</button>
             </div>
             <div class="header-right">
                 <button class="header-btn" id="themeToggle">
@@ -635,13 +642,13 @@
         };
 
         function initLang() {
-            currentLang = localStorage.getItem('lang') || 'fr';
+            currentLang = localStorage.getItem('lang') || 'en';
             updateLangUI();
             applyTranslations();
         }
 
-        function toggleLang() {
-            currentLang = currentLang === 'fr' ? 'en' : 'fr';
+        function setLang(lang) {
+            currentLang = lang;
             localStorage.setItem('lang', currentLang);
             updateLangUI();
             applyTranslations();
@@ -651,12 +658,8 @@
         }
 
         function updateLangUI() {
-            const btn = document.getElementById('langToggle');
-            if (currentLang === 'fr') {
-                btn.innerHTML = '🇫🇷 <span>FR</span>';
-            } else {
-                btn.innerHTML = '🇬🇧 <span>EN</span>';
-            }
+            document.getElementById('langFr').classList.toggle('active', currentLang === 'fr');
+            document.getElementById('langEn').classList.toggle('active', currentLang === 'en');
         }
 
         function applyTranslations() {
@@ -942,7 +945,8 @@
         document.getElementById('fullscreenToggle').addEventListener('click', toggleFullscreen);
         document.getElementById('miniModeToggle').addEventListener('click', toggleMiniMode);
         document.getElementById('miniClose').addEventListener('click', closeMiniMode);
-        document.getElementById('langToggle').addEventListener('click', toggleLang);
+        document.getElementById('langFr').addEventListener('click', () => setLang('fr'));
+        document.getElementById('langEn').addEventListener('click', () => setLang('en'));
         window.addEventListener('resize', () => { resizeChart(); drawChart(); });
 
         createStars();
