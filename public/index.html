@@ -116,6 +116,25 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+        .header-center {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .lang-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 8px 14px;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .lang-btn:hover { background: rgba(79, 172, 254, 0.2); }
+        .lang-btn span { font-size: 12px; }
         .header-right { display: flex; gap: 10px; align-items: center; }
         .header-btn {
             background: var(--card-bg);
@@ -456,31 +475,36 @@
     <div class="app">
         <header class="header">
             <h1>CPU Monitor</h1>
+            <div class="header-center">
+                <button class="lang-btn" id="langToggle">
+                    🇫🇷 <span>FR</span>
+                </button>
+            </div>
             <div class="header-right">
                 <button class="header-btn" id="themeToggle">
                     <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
                     </svg>
-                    Thème
+                    <span data-i18n="theme">Thème</span>
                 </button>
                 <button class="header-btn" id="fullscreenToggle">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                     </svg>
-                    Plein écran
+                    <span data-i18n="fullscreen">Plein écran</span>
                 </button>
                 <button class="header-btn" id="miniModeToggle">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>
                     </svg>
-                    Mini
+                    <span data-i18n="mini">Mini</span>
                 </button>
             </div>
         </header>
 
         <main class="main">
             <div class="card cpu-card">
-                <div class="card-title">CPU <span class="info-icon" data-tooltip="Processeur principal et son utilisation actuelle">i</span></div>
+                <div class="card-title"><span data-i18n="cpu">CPU</span> <span class="info-icon" data-i18n-tooltip="cpuTooltip" data-tooltip="Processeur principal et son utilisation actuelle">i</span></div>
                 <div class="cpu-content">
                     <div class="chip-icon">
                         <div class="chip-pins pins-top"></div>
@@ -489,49 +513,49 @@
                         <div class="chip-pins pins-right"></div>
                         <div class="chip-body" id="chipBody"><span class="chip-label" id="chipLabel">CPU</span></div>
                     </div>
-                    <div class="cpu-name" id="cpuName">Chargement...</div>
+                    <div class="cpu-name" id="cpuName" data-i18n="loading">Chargement...</div>
                     <div class="gauge-container">
                         <div class="gauge-bg"></div>
                         <div class="gauge-fill" id="gaugeFill"></div>
                         <div class="gauge-inner">
                             <div class="percentage"><span id="usageValue">0</span><span class="percentage-symbol">%</span></div>
-                            <div class="gauge-label">Utilisation</div>
+                            <div class="gauge-label" data-i18n="usage">Utilisation</div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="card memory-card">
-                <div class="card-title">Mémoire RAM <span class="info-icon" data-tooltip="Mémoire vive utilisée par vos applications">i</span></div>
+                <div class="card-title"><span data-i18n="memory">Mémoire RAM</span> <span class="info-icon" data-i18n-tooltip="memoryTooltip" data-tooltip="Mémoire vive utilisée par vos applications">i</span></div>
                 <div class="memory-content">
                     <div class="memory-value"><span id="memUsage">0</span><span class="percentage-symbol">%</span></div>
                     <div class="memory-bar"><div class="memory-bar-fill" id="memBar"></div></div>
                     <div class="memory-stats">
-                        <span>Utilisé: <span id="memUsed">0</span> GB</span>
+                        <span><span data-i18n="used">Utilisé</span>: <span id="memUsed">0</span> GB</span>
                         <span>Total: <span id="memTotal">0</span> GB</span>
                     </div>
                 </div>
             </div>
 
             <div class="card cores-card">
-                <div class="card-title">Cœurs <span class="info-icon" data-tooltip="Utilisation de chaque cœur du processeur avec sa fréquence">i</span></div>
+                <div class="card-title"><span data-i18n="cores">Cœurs</span> <span class="info-icon" data-i18n-tooltip="coresTooltip" data-tooltip="Utilisation de chaque cœur du processeur avec sa fréquence">i</span></div>
                 <div class="cores-grid" id="coresGrid"></div>
             </div>
 
             <div class="card processes-card">
-                <div class="card-title">Top 5 Processus <span class="info-icon" data-tooltip="Les 5 applications les plus gourmandes en CPU">i</span></div>
+                <div class="card-title"><span data-i18n="topProcesses">Top 5 Processus</span> <span class="info-icon" data-i18n-tooltip="processesTooltip" data-tooltip="Les 5 applications les plus gourmandes en CPU">i</span></div>
                 <div class="process-list" id="processList"></div>
             </div>
 
             <div class="card chart-card">
-                <div class="card-title">Historique <span class="info-icon" data-tooltip="Évolution CPU (bleu) et RAM (cyan) sur 60 secondes">i</span></div>
+                <div class="card-title"><span data-i18n="history">Historique</span> <span class="info-icon" data-i18n-tooltip="historyTooltip" data-tooltip="Évolution CPU (bleu) et RAM (cyan) sur 60 secondes">i</span></div>
                 <div class="chart-container"><canvas class="chart-canvas" id="historyChart"></canvas></div>
             </div>
 
             <div class="card stats-card">
-                <div class="stat-item"><div class="stat-value" id="coresValue">-</div><div class="stat-label">Cœurs</div></div>
+                <div class="stat-item"><div class="stat-value" id="coresValue">-</div><div class="stat-label" data-i18n="coresLabel">Cœurs</div></div>
                 <div class="stat-item"><div class="stat-value" id="speedValue">-</div><div class="stat-label">GHz</div></div>
-                <div class="stat-item"><div class="stat-value" id="processesValue">-</div><div class="stat-label">Processus</div></div>
+                <div class="stat-item"><div class="stat-value" id="processesValue">-</div><div class="stat-label" data-i18n="processesLabel">Processus</div></div>
                 <div class="stat-item"><div class="stat-value" id="ioOpsValue">-</div><div class="stat-label">I/O Ops/s</div></div>
             </div>
         </main>
@@ -539,14 +563,14 @@
 
     <div class="connection-status">
         <div class="status-dot" id="statusDot"></div>
-        <span id="statusText">Connexion...</span>
+        <span id="statusText" data-i18n="connecting">Connexion...</span>
     </div>
 
     <div class="mini-widget" id="miniWidget">
         <button class="mini-widget-close" id="miniClose">×</button>
         <div class="mini-cpu-name" id="miniCpuName">CPU</div>
         <div class="mini-percentage" id="miniPercentage">0%</div>
-        <div class="mini-label">Utilisation CPU</div>
+        <div class="mini-label" data-i18n="cpuUsage">Utilisation CPU</div>
     </div>
 
     <script>
@@ -555,6 +579,101 @@
         let currentDisplayUsage = 0, targetUsage = 0;
         let ws = null, chartCtx = null;
         let coresInitialized = false, coreElements = [];
+        let currentLang = 'fr';
+
+        const translations = {
+            fr: {
+                theme: 'Thème',
+                fullscreen: 'Plein écran',
+                mini: 'Mini',
+                cpu: 'CPU',
+                memory: 'Mémoire RAM',
+                cores: 'Cœurs',
+                topProcesses: 'Top 5 Processus',
+                history: 'Historique',
+                coresLabel: 'Cœurs',
+                processesLabel: 'Processus',
+                usage: 'Utilisation',
+                used: 'Utilisé',
+                loading: 'Chargement...',
+                connecting: 'Connexion...',
+                connected: 'Connecté',
+                disconnected: 'Déconnecté',
+                cpuUsage: 'Utilisation CPU',
+                core: 'Cœur',
+                cpuTooltip: 'Processeur principal et son utilisation actuelle',
+                memoryTooltip: 'Mémoire vive utilisée par vos applications',
+                coresTooltip: 'Utilisation de chaque cœur du processeur avec sa fréquence',
+                processesTooltip: 'Les 5 applications les plus gourmandes en CPU',
+                historyTooltip: 'Évolution CPU (bleu) et RAM (cyan) sur 60 secondes'
+            },
+            en: {
+                theme: 'Theme',
+                fullscreen: 'Fullscreen',
+                mini: 'Mini',
+                cpu: 'CPU',
+                memory: 'RAM Memory',
+                cores: 'Cores',
+                topProcesses: 'Top 5 Processes',
+                history: 'History',
+                coresLabel: 'Cores',
+                processesLabel: 'Processes',
+                usage: 'Usage',
+                used: 'Used',
+                loading: 'Loading...',
+                connecting: 'Connecting...',
+                connected: 'Connected',
+                disconnected: 'Disconnected',
+                cpuUsage: 'CPU Usage',
+                core: 'Core',
+                cpuTooltip: 'Main processor and its current usage',
+                memoryTooltip: 'RAM used by your applications',
+                coresTooltip: 'Usage of each processor core with its frequency',
+                processesTooltip: 'The 5 most CPU-intensive applications',
+                historyTooltip: 'CPU (blue) and RAM (cyan) evolution over 60 seconds'
+            }
+        };
+
+        function initLang() {
+            currentLang = localStorage.getItem('lang') || 'fr';
+            updateLangUI();
+            applyTranslations();
+        }
+
+        function toggleLang() {
+            currentLang = currentLang === 'fr' ? 'en' : 'fr';
+            localStorage.setItem('lang', currentLang);
+            updateLangUI();
+            applyTranslations();
+            if (coresInitialized) {
+                coresInitialized = false;
+            }
+        }
+
+        function updateLangUI() {
+            const btn = document.getElementById('langToggle');
+            if (currentLang === 'fr') {
+                btn.innerHTML = '🇫🇷 <span>FR</span>';
+            } else {
+                btn.innerHTML = '🇬🇧 <span>EN</span>';
+            }
+        }
+
+        function applyTranslations() {
+            const t = translations[currentLang];
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (t[key]) el.textContent = t[key];
+            });
+            document.querySelectorAll('[data-i18n-tooltip]').forEach(el => {
+                const key = el.getAttribute('data-i18n-tooltip');
+                if (t[key]) el.setAttribute('data-tooltip', t[key]);
+            });
+        }
+
+        function t(key) {
+            return translations[currentLang][key] || key;
+        }
 
         const coreColors = [
             '#4facfe', '#00f2fe', '#a8edea', '#fed6e3', '#ff9a9e', '#fecfef', '#ffecd2', '#fcb69f',
@@ -642,7 +761,7 @@
             const color = '#4facfe';
             grid.innerHTML = cores.map((c, i) => {
                 return `<div class="core-item">
-                    <div class="core-number" style="color:${color}">Cœur ${c.core}</div>
+                    <div class="core-number" style="color:${color}">${t('core')} ${c.core}</div>
                     <div class="core-ghz" id="ghz-${i}">${speed.toFixed(1)} GHz</div>
                     <div class="core-bar"><div class="core-bar-fill" id="bar-${i}" style="background:${color};height:0%"></div></div>
                     <div class="core-value" id="val-${i}" style="color:${color}">0%</div>
@@ -766,12 +885,12 @@
             ws = new WebSocket(`${protocol}//${location.host}`);
             ws.onopen = () => {
                 document.getElementById('statusDot').classList.remove('disconnected');
-                document.getElementById('statusText').textContent = 'Connecté';
+                document.getElementById('statusText').textContent = t('connected');
             };
             ws.onmessage = (e) => updateData(JSON.parse(e.data));
             ws.onclose = () => {
                 document.getElementById('statusDot').classList.add('disconnected');
-                document.getElementById('statusText').textContent = 'Déconnecté';
+                document.getElementById('statusText').textContent = t('disconnected');
                 setTimeout(connectWebSocket, 2000);
             };
             ws.onerror = () => ws.close();
@@ -823,10 +942,12 @@
         document.getElementById('fullscreenToggle').addEventListener('click', toggleFullscreen);
         document.getElementById('miniModeToggle').addEventListener('click', toggleMiniMode);
         document.getElementById('miniClose').addEventListener('click', closeMiniMode);
+        document.getElementById('langToggle').addEventListener('click', toggleLang);
         window.addEventListener('resize', () => { resizeChart(); drawChart(); });
 
         createStars();
         initTheme();
+        initLang();
         initChart();
         smoothUpdateGauge();
         connectWebSocket();
