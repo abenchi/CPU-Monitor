@@ -7,24 +7,28 @@ Moniteur CPU en temps réel avec interface web moderne.
 ## Installation rapide
 
 ### 1. Installer Node.js (si pas déjà fait)
-Télécharge et installe Node.js : https://nodejs.org/
+Télécharge et installe Node.js : https://nodejs.org/ (clique sur le gros bouton vert)
 
 ### 2. Télécharger le projet
+Télécharge le ZIP : https://github.com/abenchi/CPU-Monitor/archive/refs/heads/main.zip
+
+Puis **extrais le ZIP** (clic droit → Extraire tout)
+
+### 3. Lancer le site
+
+**🍎 Sur Mac :** Double-clique sur `start.command`
+
+**🪟 Sur Windows :** Double-clique sur `start.bat`
+
+Le navigateur s'ouvre automatiquement sur http://localhost:3000
+
+### Alternative (ligne de commande)
 ```bash
-git clone https://github.com/abenchi/CPU-Monitor.git
 cd CPU-Monitor
-```
-
-**OU** télécharge le ZIP : https://github.com/abenchi/CPU-Monitor/archive/refs/heads/main.zip
-
-### 3. Installer et lancer
-```bash
 npm install
 node server.js
 ```
-
-### 4. Ouvrir le navigateur
-Va sur : **http://localhost:3000**
+Puis ouvre : **http://localhost:3000**
 
 ---
 
